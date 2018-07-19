@@ -3,9 +3,10 @@ import datetime
 import calendar
 import time
 import os
-from flask import Flask, request, make_response
+from flask import Flask, request, make_response,jsonify
 #from mysqlconnection import MySQLConnector
 from psqlconnection import PSQLConnector
+from jwt_state import JwtHandler
 import bcrypt
 from flask_cors import CORS
 
@@ -88,59 +89,63 @@ def login():
 @app.route('/api/register', methods=['POST'])
 
 def register():
-
+    
+    #return jsonify({"hello":request.json['email']})
+    
     proceed = True
     
-    if not re.match("^[a-zA-Z0-9.+_-]+@[a-zA-Z0-9._-]+\.[a-zA-Z]+$",request.form['email']):
-        flash("Not valid email")
+    if not re.match("^[a-zA-Z0-9.+_-]+@[a-zA-Z0-9._-]+\.[a-zA-Z]+$",request.json['email']):
+        
         proceed = False
 
-    if len(request.form['password']) < 9:
-        flash("Password is not long enough")
+    if len(request.json['password']) < 9:
+        
         proceed = False
 
-    if request.form['password'] != request.form['confirm_password']:
-        flash("Confirm password is not the same as password")
+    if request.json['password'] != request.json['confirm_password']:
+    
         proceed = False
 
     if proceed:
 
-        password_hashed = bcrypt.hashpw(request.form['password'].encode(), bcrypt.gensalt())
-        
+        password_hashed = bcrypt.hashpw(request.json['password'].encode(), bcrypt.gensalt())
+        return jsonify({"hash":password_hashed})
+        '''
         now = datetime.datetime.utcnow()
         query = "INSERT INTO users (email, password, created_at, updated_at)\
-                 VALUES (:email, :password, :created_at, :updated_at)"
-
+                 VALUES ({},{},{},{})".format(request.json['email'],str(password_hashed),now,now)
+        
         data = {
                 'email': request.form['email'],
                 'password': password_hashed,
 	            'created_at':now,
 	            'updated_at':now
                 }
-
-        good_register = psql.query_db(query, data)
+        
+        good_register = psql.query_db(query)
 
         if type(good_register) == long:
 
             # get the id for the new user, make jwt and send it back to client
-            name_query = "SELECT id FROM users WHERE email = '{}'".format(request.form['email'])
+            name_query = "SELECT id FROM users WHERE email = '{}'".format(request.json['email'])
             person = psql.query_db(name_query)
             jwt_payload = person[0].get('id')
             token = jwt.encode_crypto_jwt(jwt_payload);
-            return make_response(jsonify({'jwt_id': token}), 200)
+            return jsonify({'jwt_id': token})
 
         else:
 
             return make_response(jsonify({'error': 'not found'}), 404)
+        '''
 
     else:
         return make_response(jsonify({'error': 'not found'}), 404)
-
-
+    
+    
 @app.route('/api/users', methods=['GET'])
 
 def users():
-    pass
+    return jsonify({"hello":"there"})
     '''
 	status = auth_token(request.headers['x-access-token'])
     
@@ -179,6 +184,6 @@ def catch_all(path):
     return make_response(jsonify({'error': 'not found'}), 404)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', debug=False)      
+    app.run(host='0.0.0.0', debug=True)      
 
     

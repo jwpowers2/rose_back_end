@@ -8,15 +8,15 @@ class PSQLConnection(object):
         self.db=psycopg2.connect(dbname=db,
                                  host="localhost",
                                  port="5432",
-                                 user="aggmaster",
-                                 password="p11a2s3s5")
+                                 user="postgres",
+                                 password="FootBall24!!")
 
         
 
     def query_db(self, query, data=None):
 
         cur = self.db.cursor()
-        result = cur.execute(text(query),data)
+        result = cur.execute(query,data)
 
         if query[0:6].lower() == 'select':
 
