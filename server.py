@@ -15,6 +15,12 @@ CORS(app)
 app.secret_key = "key"
 psql = PSQLConnector(app,'users')
 
+
+with open("ssh_keys/jwt_key.pem","r") as private_key, open ("ssh_keys/jwt_key.pub","r") as public_key:
+    
+    jwt = JwtHandler(private_key,public_key,os.environ['JWT_KEY'])
+
+
 def auth_token(token):
 
     try:
@@ -36,13 +42,11 @@ def auth_token(token):
 
 def all_users():
 
-	users_list = psql.query_db("SELECT users.id,users.email,users.created_at from users")
-    return users_list
-
-
-with open("ssh_keys/jwt_key.pem","r") as private_key, open ("ssh_keys/jwt_key.pub","r") as public_key:
+	return psql.query_db("SELECT users.id,users.email,users.created_at FROM users")
     
-    jwt = JwtHandler(private_key,public_key,os.environ['JWT_KEY'])
+
+
+
 
 
 
@@ -63,9 +67,10 @@ def auth_user():
 def login():
 
     try:
-
+        print request.form
+        '''
         users = psql.query_db("SELECT * FROM users WHERE email='{}'".format(request.form['email']))
-
+        
         if bcrypt.checkpw(request.form['password'].encode(), users[0]['password'].encode()):
             
             # -- make JWT token using id from table and send it back to client
@@ -75,7 +80,7 @@ def login():
         else:
            
             return make_response(jsonify({'error': 'not found'}), 404)
-            
+        '''    
     except:
 
         return make_response(jsonify({'error': 'not found'}), 404)
@@ -135,9 +140,10 @@ def register():
 @app.route('/api/users')
 
 def users():
+
 	status = auth_token(request.headers['x-access-token'])
     
-    if (status == True):
+    if (status):
 
         return make_response(jsonify({'users': all_users()}))
     
@@ -152,7 +158,7 @@ def remove_user(user_id):
 
 	status = auth_token(request.headers['x-access-token'])
     
-    if (status == True):
+    if (status):
 
         query = "DELETE FROM users WHERE id=:user_id"
         psql.query_db(query)
