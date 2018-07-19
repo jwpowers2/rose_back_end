@@ -7,9 +7,11 @@ from flask import Flask, request, make_response
 #from mysqlconnection import MySQLConnector
 from psqlconnection import PSQLConnector
 import bcrypt
+from flask_cors import CORS
 
 
 app = Flask(__name__)
+CORS(app)
 app.secret_key = "key"
 psql = PSQLConnector(app,'users')
 
@@ -133,7 +135,7 @@ def register():
 @app.route('/api/users')
 
 def users():
-	status = auth_user(request.headers['x-access-token'])
+	status = auth_token(request.headers['x-access-token'])
     
     if (status == True):
 
@@ -148,7 +150,7 @@ def users():
 
 def remove_user(user_id):
 
-	status = auth_user(request.headers['x-access-token'])
+	status = auth_token(request.headers['x-access-token'])
     
     if (status == True):
 
