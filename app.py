@@ -50,7 +50,7 @@ def all_users():
 
 
 
-@app.route('/auth/user')
+@app.route('/auth/user', methods=['GET'])
 
 def auth_user():
 
@@ -137,28 +137,31 @@ def register():
         return make_response(jsonify({'error': 'not found'}), 404)
 
 
-@app.route('/api/users')
+@app.route('/api/users', methods=['GET'])
 
 def users():
-
+    pass
+    '''
 	status = auth_token(request.headers['x-access-token'])
     
-    if (status == True):
+    if status:
 
         return make_response(jsonify({'users': all_users()}))
     
     else:
 
-       return make_response(jsonify({'error': 'not found'}), 404)
-
+        return make_response(jsonify({'error': 'not found'}), 404)
+    '''
 
 @app.route('/api/users/<int:user_id>', methods=['DEL'])
 
 def remove_user(user_id):
 
+    pass
+    '''
 	status = auth_token(request.headers['x-access-token'])
     
-    if (status == True):
+    if status:
 
         query = "DELETE FROM users WHERE id=:user_id"
         psql.query_db(query)
@@ -167,7 +170,7 @@ def remove_user(user_id):
     else:
 
        return make_response(jsonify({'error': 'not found'}), 404)
-    
+    '''
 
 @app.route('/<path:path>')
 
