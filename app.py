@@ -3,23 +3,37 @@ import datetime
 import calendar
 import time
 import os
+import json
+import pem
 from flask import Flask, request, make_response,jsonify
+from flask_bcrypt import Bcrypt
+import hashlib
 #from mysqlconnection import MySQLConnector
 from psqlconnection import PSQLConnector
 from jwt_state import JwtHandler
-import bcrypt
+
 from flask_cors import CORS
 
 
 app = Flask(__name__)
 CORS(app)
+bcrypt = Bcrypt(app)
 app.secret_key = "key"
 psql = PSQLConnector(app,'users')
 
+'''
+private_key = pem.parse_file("ssh_keys/jwt_key_private.pem")
+with open("ssh_keys/jwt_key_public.pub","r") as public_key:
+    print public_key
+'''
 
-with open("ssh_keys/jwt_key.pem","r") as private_key, open ("ssh_keys/jwt_key.pub","r") as public_key:
-    
-    jwt = JwtHandler(private_key,public_key,os.environ['JWT_KEY'])
+pemfile = open("ssh_keys/jwt_key_private.pem", 'r')
+private_key = pemfile.read()
+pemfile.close()
+pubfile = open("ssh_keys/jwt_key_public.pub", 'r')
+public_key = pubfile.read()
+pubfile.close()    
+jwt = JwtHandler(private_key,public_key,os.environ['JWT_KEY'])
 
 
 def auth_token(token):
@@ -66,25 +80,21 @@ def auth_user():
 @app.route('/api/login', methods=['POST'])
 
 def login():
-
-    try:
-        print request.form
-        '''
-        users = psql.query_db("SELECT * FROM users WHERE email='{}'".format(request.form['email']))
+    
+    users = psql.query_db("SELECT * FROM users WHERE email='{}'".format(request.json['email']))
+    user = users[0]
+    if (bcrypt.check_password_hash(user['password'],request.json['password'] )):
         
-        if bcrypt.checkpw(request.form['password'].encode(), users[0]['password'].encode()):
-            
-            # -- make JWT token using id from table and send it back to client
-            token = jwt.encode_crypto_jwt(users.id)
-            return make_response(jsonify({'jwt_id':token}),200)
+        # -- make JWT token using id from table and send it back to client
+        token = jwt.encode_crypto_jwt({'jwt_id':user['id']})
+        return make_response(jsonify({'jwt_id':token}),200)
+        #return jsonify({"hello":"good password"})
 
-        else:
-           
-            return make_response(jsonify({'error': 'not found'}), 404)
-        '''    
-    except:
-
+    else:
+       
         return make_response(jsonify({'error': 'not found'}), 404)
+          
+
 
 @app.route('/api/register', methods=['POST'])
 
@@ -108,35 +118,30 @@ def register():
 
     if proceed:
 
-        password_hashed = bcrypt.hashpw(request.json['password'].encode(), bcrypt.gensalt())
-        return jsonify({"hash":password_hashed})
-        '''
+        password_hashed = bcrypt.generate_password_hash(request.json['password'])
+        #password_hashed = hashlib.sha256(request.json['password']).hexdigest()
+        
         now = datetime.datetime.utcnow()
         query = "INSERT INTO users (email, password, created_at, updated_at)\
-                 VALUES ({},{},{},{})".format(request.json['email'],str(password_hashed),now,now)
+                 VALUES ('{}','{}','{}','{}')".format(request.json['email'],password_hashed,now,now)
         
+        '''
         data = {
                 'email': request.form['email'],
                 'password': password_hashed,
 	            'created_at':now,
 	            'updated_at':now
                 }
-        
-        good_register = psql.query_db(query)
-
-        if type(good_register) == long:
-
-            # get the id for the new user, make jwt and send it back to client
-            name_query = "SELECT id FROM users WHERE email = '{}'".format(request.json['email'])
-            person = psql.query_db(name_query)
-            jwt_payload = person[0].get('id')
-            token = jwt.encode_crypto_jwt(jwt_payload);
-            return jsonify({'jwt_id': token})
-
-        else:
-
-            return make_response(jsonify({'error': 'not found'}), 404)
         '''
+        psql.query_db(query)
+        #return jsonify({"hello":good_register})
+        # get the id for the new user, make jwt and send it back to client
+        name_query = "SELECT * FROM users WHERE email='{}'".format(request.json['email'])
+        person = psql.query_db(name_query)
+        #return jsonify({"hello":good_register})
+        #jwt_payload = person[0].get('id')
+        #token = jwt.encode_crypto_jwt(jwt_payload);
+        #return jsonify({'jwt_id': token})
 
     else:
         return make_response(jsonify({'error': 'not found'}), 404)
