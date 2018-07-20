@@ -1,32 +1,20 @@
-import re
-import datetime
-import calendar
-import time
-import os
-import json
-import pem
+import re,datetime,calendar,time,os,json,pem,hashlib
 from flask import Flask, request, make_response,jsonify
 from flask_bcrypt import Bcrypt
-import hashlib
 #from mysqlconnection import MySQLConnector
 from psqlconnection import PSQLConnector
 from jwt_state import JwtHandler
-
 from flask_cors import CORS
 
 
+# make Flask object and DB object
 app = Flask(__name__)
 CORS(app)
 bcrypt = Bcrypt(app)
 app.secret_key = "key"
 psql = PSQLConnector(app,'users')
 
-'''
-private_key = pem.parse_file("ssh_keys/jwt_key_private.pem")
-with open("ssh_keys/jwt_key_public.pub","r") as public_key:
-    print public_key
-'''
-
+# make json web token object
 pemfile = open("ssh_keys/jwt_key_private.pem", 'r')
 private_key = pemfile.read()
 pemfile.close()
@@ -41,10 +29,7 @@ def auth_token(token):
     try:
 
         decoded = jwt.decode_crypto_jwt(token)
-        # if it decodes successfully, check if user is in the DB and return true to client if so
-        print decoded
-        # jwt_id is the user id from the users table
-        user = psql.query_db("SELECT * FROM users WHERE id='{}'".format(decoded.jwt_id))
+        user = psql.query_db("SELECT * FROM users WHERE id='{}'".format(decoded.get('jwt_id')))
         if (len(user) > 0):
         	return True
         else:
@@ -58,11 +43,6 @@ def auth_token(token):
 def all_users():
 
 	return psql.query_db("SELECT users.id,users.email,users.created_at FROM users")
-    
-
-
-
-
 
 
 @app.route('/auth/user', methods=['GET'])
@@ -70,12 +50,12 @@ def all_users():
 def auth_user():
 
     status = auth_token(request.headers['x-access-token']);
-
+    
     if (status == True):
         return make_response(jsonify({'authenticated':True}), 200)
     else:
         return make_response(jsonify({'authenticated': False}), 200)
-
+    
 
 @app.route('/api/login', methods=['POST'])
 
@@ -85,16 +65,13 @@ def login():
     user = users[0]
     if (bcrypt.check_password_hash(user['password'],request.json['password'] )):
         
-        # -- make JWT token using id from table and send it back to client
         token = jwt.encode_crypto_jwt({'jwt_id':user['id']})
         return make_response(jsonify({'jwt_id':token}),200)
-        #return jsonify({"hello":"good password"})
 
     else:
        
         return make_response(jsonify({'error': 'not found'}), 404)
           
-
 
 @app.route('/api/register', methods=['POST'])
 
@@ -125,62 +102,50 @@ def register():
         query = "INSERT INTO users (email, password, created_at, updated_at)\
                  VALUES ('{}','{}','{}','{}')".format(request.json['email'],password_hashed,now,now)
         
-        '''
-        data = {
-                'email': request.form['email'],
-                'password': password_hashed,
-	            'created_at':now,
-	            'updated_at':now
-                }
-        '''
         psql.query_db(query)
-        #return jsonify({"hello":good_register})
-        # get the id for the new user, make jwt and send it back to client
+        
         name_query = "SELECT * FROM users WHERE email='{}'".format(request.json['email'])
         person = psql.query_db(name_query)
-        #return jsonify({"hello":good_register})
-        #jwt_payload = person[0].get('id')
-        #token = jwt.encode_crypto_jwt(jwt_payload);
-        #return jsonify({'jwt_id': token})
+        
+        jwt_payload = person[0].get('id')
+        token = jwt.encode_crypto_jwt({'jwt_id':person[0].get('id')})
+        return jsonify({'jwt_id': token})
 
     else:
-        return make_response(jsonify({'error': 'not found'}), 404)
+        return make_response(jsonify({'error': 'there was a problem with your registration'}), 404)
     
     
 @app.route('/api/users', methods=['GET'])
 
 def users():
-    return jsonify({"hello":"there"})
-    '''
+    
 	status = auth_token(request.headers['x-access-token'])
-    
-    if status:
 
-        return make_response(jsonify({'users': all_users()}))
-    
-    else:
+	if (status):
 
-        return make_response(jsonify({'error': 'not found'}), 404)
-    '''
+		return make_response(jsonify({'users': all_users()}))
 
-@app.route('/api/users/<int:user_id>', methods=['DEL'])
+	else:
+
+		return make_response(jsonify({'error': 'not found'}), 404)
+
+
+@app.route('/api/users/<user_id>', methods=['DELETE'])
 
 def remove_user(user_id):
 
-    pass
-    '''
 	status = auth_token(request.headers['x-access-token'])
-    
-    if status:
 
-        query = "DELETE FROM users WHERE id=:user_id"
-        psql.query_db(query)
-        return make_response(jsonify({'users': all_users()}))
-    
-    else:
+	if (status):
 
-       return make_response(jsonify({'error': 'not found'}), 404)
-    '''
+		query = "DELETE FROM users WHERE id='{}'".format(user_id)
+		psql.query_db(query)
+		return make_response(jsonify({'users': all_users()}))
+
+	else:
+
+		return make_response(jsonify({'error': 'not found'}), 404)
+    
 
 @app.route('/<path:path>')
 

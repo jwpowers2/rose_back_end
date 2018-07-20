@@ -40,7 +40,7 @@ class PSQLConnection(object):
             self.conn.commit()
             cur.close()
             
-            return result
+            return True
             
         else:
 
