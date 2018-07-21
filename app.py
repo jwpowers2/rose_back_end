@@ -45,7 +45,7 @@ def all_users():
 	return psql.query_db("SELECT users.id,users.email,users.created_at FROM users")
 
 
-@app.route('/auth/user', methods=['GET'])
+@app.route('/api/auth/user', methods=['GET'])
 
 def auth_user():
 
