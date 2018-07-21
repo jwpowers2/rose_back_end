@@ -66,6 +66,7 @@ def login():
     if (bcrypt.check_password_hash(user['password'],request.json['password'] )):
         
         token = jwt.encode_crypto_jwt({'jwt_id':user['id']})
+        print token
         return make_response(jsonify({'jwt_id':token}),200)
 
     else:
