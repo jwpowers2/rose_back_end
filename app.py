@@ -42,7 +42,7 @@ def auth_token(token):
 
 def all_users():
 
-	return psql.query_db("SELECT users.id,users.email,users.created_at FROM users")
+	return psql.query_db("SELECT users.id,users.first_name,users.last_name,users.home,users.email FROM users")
 
 
 @app.route('/api/auth/user', methods=['GET'])
@@ -86,6 +86,18 @@ def register():
         
         proceed = False
 
+    if not re.search("[a-zA-Z]{2,30}",request.json['first_name']):
+        
+        proceed = False
+
+    if not re.search("[a-zA-Z]{2,30}",request.json['last_name']):
+        
+        proceed = False
+    
+    if re.search("[<>`*=]",request.json['home']):
+
+        proceed = False
+    
     if len(request.json['password']) < 9:
         
         proceed = False
@@ -100,8 +112,15 @@ def register():
         #password_hashed = hashlib.sha256(request.json['password']).hexdigest()
         
         now = datetime.datetime.utcnow()
-        query = "INSERT INTO users (email, password, created_at, updated_at)\
-                 VALUES ('{}','{}','{}','{}')".format(request.json['email'],password_hashed,now,now)
+        query = "INSERT INTO users (first_name, last_name, home, email, password, created_at, updated_at)\
+                 VALUES ('{}','{}','{}','{}','{}','{}','{}')".format(
+                                                                     request.json['first_name'],
+                                                                     request.json['last_name'],
+                                                                     request.json['home'],
+                                                                     request.json['email'],
+                                                                     password_hashed,
+                                                                     now,
+                                                                     now)
         
         psql.query_db(query)
         
