@@ -1,5 +1,9 @@
 # Rose Back End
 
+```
+uwsgi --http-socket 0.0.0.0:5000 --plugin python --wsgi-file wsgi.py --callable app
+
+```
 ### Rose Back End is a Python Flask API for authenticating and managing users 
 
 #### installation and use on linux
